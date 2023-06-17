@@ -1,10 +1,14 @@
-import controller
-import model
+from server import app
 from secret import secret_data
-
-
-# config and start server
-from server import app, csrf
 for key in secret_data.keys():
     app.config[key] = secret_data[key]
+from config import config_data
+for key in config_data.keys():
+    app.config[key] = config_data[key]
+
+
+import controller
+import model
+
+# start server
 app.run()
