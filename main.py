@@ -5,9 +5,6 @@ from secret import secret_data
 
 # config and start server
 from server import app, csrf
-app.config['SECRET_KEY'] = secret_data['SECRET_KEY']
-app.config['databasewebsitepraxis_username'] = \
-secret_data['databasewebsitepraxis_username']
-app.config['databasewebsitepraxis_password'] = \
-secret_data['databasewebsitepraxis_password']
+for key in secret_data.keys():
+    app.config[key] = secret_data[key]
 app.run()
