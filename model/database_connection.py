@@ -12,3 +12,4 @@ def get_postgres_connection(user, password, host, port, database):
         return connection
     except (Exception, Error) as error:
         print("Error while connecting to PostgreSQL", error)
+
