@@ -12,6 +12,8 @@ from model import database_connection
 from datetime import date, datetime
 from uuid import uuid4
 
+import bcrypt
+
 @app.route('/', methods=['GET'])
 def home_page():
     return home_page_function()
@@ -71,14 +73,19 @@ def register_submit_function():
         and 'education' in request.form and 'phone_number' in request.form \
         and 'register_form_csrf_token' in request.form and 'session' in request.cookies:
         response_data['data_complete'] = True
+        account_name = request.form['name'].strip()
+        account_email = request.form['email'].strip()
+        account_address = request.form['address'].strip()
+        account_education = request.form['education'].strip()
+        account_phone_number = request.form['phone_number'].strip()
         response_data['csrf_token_valid'] = False
         validate_csrf(request.form['register_form_csrf_token'])
         response_data['csrf_token_valid'] = True
         # https://stackoverflow.com/questions/181530/styling-multi-line-conditions-in-if-statements
         response_data['name_valid'] = False
-        if (len(request.form['name']) == 0 or request.form['name'].isspace() or
-            len(request.form['name']) > app.config['account_name_max_length'] or 
-            not re.match(app.config['account_name_regex'], request.form['name'])):
+        if (len(account_name) == 0 or account_name.isspace() or
+            len(account_name) > app.config['account_name_max_length'] or 
+            not re.match(app.config['account_name_regex'], account_name)):
             response_data['error_log'] = "Account name invalid, either contain invalid character, is empty string, or too long."
             response_code = HTTPStatus.BAD_REQUEST.value
             return make_response(jsonify(response_data)), response_code
@@ -94,8 +101,8 @@ def register_submit_function():
         # Regex to verify email format which include international domain email is too complicated/long/impractical, 
         # the current best way to check whether email is valid or not is to try to send verification mail to the email
         response_data['email_valid'] = False
-        if (len(request.form['email']) == 0 or request.form['email'].isspace() or
-            len(request.form['email']) > app.config['account_email_max_length']):
+        if (len(account_email) == 0 or account_email.isspace() or
+            len(account_email) > app.config['account_email_max_length']):
             response_data['error_log'] = "Account email invalid, either contain invalid character, is empty string, or too long."
             response_code = HTTPStatus.BAD_REQUEST.value
             return make_response(jsonify(response_data)), response_code
@@ -111,7 +118,7 @@ def register_submit_function():
         with db_conn.cursor() as db_cursor:
             sql_query = "SELECT * FROM " + app.config['databasewebsitepraxis_schema'] + ".account_data WHERE email = %s"
             db_cursor.execute(sql_query, (
-                request.form['email'],
+                account_email,
             ))
             db_conn.commit()
             account_data = db_cursor.fetchone()
@@ -121,42 +128,40 @@ def register_submit_function():
                 return make_response(jsonify(response_data)), response_code
         response_data['email_already_exist'] = False
         response_data['address_valid'] = False
-        if (len(request.form['address']) == 0 or request.form['address'].isspace() or
-            len(request.form['address']) > app.config['account_address_max_length']):
+        if (len(account_address) == 0 or account_address.isspace() or
+            len(account_address) > app.config['account_address_max_length']):
             response_data['error_log'] = "Account address invalid, either is empty string, or too long."
             response_code = HTTPStatus.BAD_REQUEST.value
             return make_response(jsonify(response_data)), response_code
         response_data['address_valid'] = True
         response_data['education_valid'] = False
-        if (len(request.form['education']) == 0 or request.form['education'].isspace() or
-            len(request.form['education']) > app.config['account_education_max_length']):
+        if (len(account_education) == 0 or account_education.isspace() or
+            len(account_education) > app.config['account_education_max_length']):
             response_data['error_log'] = "Account education invalid, either is empty string, or too long."
             response_code = HTTPStatus.BAD_REQUEST.value
             return make_response(jsonify(response_data)), response_code
         response_data['education_valid'] = True
         response_data['phone_number_valid'] = False
-        if (len(request.form['phone_number']) == 0 or request.form['phone_number'].isspace() or
-            len(request.form['phone_number']) > app.config['account_phone_number_max_length'] or 
-            not re.match(app.config['account_phone_number_regex'], request.form['phone_number'])):
+        if (len(account_phone_number) == 0 or account_phone_number.isspace() or
+            len(account_phone_number) > app.config['account_phone_number_max_length'] or 
+            not re.match(app.config['account_phone_number_regex'], account_phone_number)):
             response_data['error_log'] = "Account phone number invalid, either contain invalid character, is empty string, or too long."
             response_code = HTTPStatus.BAD_REQUEST.value
             return make_response(jsonify(response_data)), response_code
         response_data['phone_number_valid'] = True
-        
+
         # at this stage, the data is valid and email does not exist, register account
         with db_conn.cursor() as db_cursor:
             sql_query = """INSERT INTO """ + app.config['databasewebsitepraxis_schema'] + \
                 """.account_data VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
             db_cursor.execute(sql_query, (
                 str(uuid4()),
-                request.form['name'],
-                # TODO
-                # Hash password
-                request.form['password'],
-                request.form['email'],
-                request.form['address'],
-                request.form['education'],
-                request.form['phone_number'],
+                account_name,
+                hash_account_password(request.form['password']),
+                account_email,
+                account_address,
+                account_education,
+                account_phone_number,
                 # TODO
                 # Email verification, for now set email verified True
                 True,
@@ -202,8 +207,8 @@ def login_submit_function():
     # verify user sent all the data
     if 'email' in request.form and 'password' in request.form and 'login_form_csrf_token' in request.form and 'session' in request.cookies:
         validate_csrf(request.form['login_form_csrf_token'])
-        email = request.form['email']
-        password = request.form['password']
+        email = request.form['email'].strip()
+        password = hash_account_password(request.form['password'])
         db_conn = database_connection.get_postgres_connection(
                 app.config['databasewebsitepraxis_username'],
                 app.config['databasewebsitepraxis_password'],
@@ -235,10 +240,10 @@ def login_submit_function():
 
 # working function
 
-def hash_password(password, account_creation_timestamp):
+def hash_account_password(password_string):
     # https://www.geeksforgeeks.org/hashing-passwords-in-python-with-bcrypt/
-    # TODO
-    pass
+    # https://stackoverflow.com/questions/48761260/bcrypt-encoding-error
+    return bcrypt.hashpw(password_string.encode('utf-8'), app.config['bcrypt_salt']).decode('utf-8')
 
 def verify_login_status():
     # check if user logged in
