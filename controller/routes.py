@@ -291,8 +291,8 @@ def generate_new_login_session_data(account_uuid, session_token):
             login_session_data['account_uuid'],
             login_session_data['login_session_uuid'],
             login_session_data['session_start_timestamp'],
-            login_session_data['user_session_token'],
-            login_session_data['last_refresh_timestamp']
+            login_session_data['last_refresh_timestamp'],
+            login_session_data['user_session_token']
         ))
         db_conn.commit()
     return login_session_data
