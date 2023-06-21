@@ -116,7 +116,7 @@ def register_submit_function():
                 "databasewebsitepraxis"
             )
         with db_conn.cursor() as db_cursor:
-            sql_query = "SELECT * FROM " + app.config['databasewebsitepraxis_schema'] + ".account_data WHERE email = %s"
+            sql_query = "SELECT * FROM " + app.config['databasewebsitepraxis_schema'] + ".account_data WHERE account_email = %s"
             db_cursor.execute(sql_query, (
                 account_email,
             ))
@@ -217,7 +217,7 @@ def login_submit_function():
                 "databasewebsitepraxis"
             )
         with db_conn.cursor() as db_cursor:
-            sql_query = "SELECT * FROM " + app.config['databasewebsitepraxis_schema'] + ".account_data WHERE email = %s and password = %s;"
+            sql_query = "SELECT * FROM " + app.config['databasewebsitepraxis_schema'] + ".account_data WHERE account_email = %s and account_password = %s;"
             db_cursor.execute(sql_query, (
                 email,
                 password
